@@ -7,6 +7,7 @@
 
 namespace dbtools {
     class postgresql {
+    public:
         struct options {
             std::string client_program = "psql";
             std::string connection_string;
@@ -14,7 +15,7 @@ namespace dbtools {
             std::string restore_program = "pg_restore";
             std::filesystem::path sql_directory;
         };
-
+    private:
         const options opts;
 
         auto analyze() const -> void;
