@@ -21,7 +21,7 @@ namespace dbtools {
 
     auto postgresql::dump(std::string_view file) const -> void {
         $(opts.dump_program, "--format", "custom", "--file", file);
-        DEBUG() << "Saved database dump to: " << file;
+        TIMBER_DEBUG("Saved database dump to: {}", file);
     }
 
     auto postgresql::exec(
