@@ -1,5 +1,5 @@
 project := dbtools
-description := C++ library for managing database data
+summary := C++ library for managing database data
 
 STD := c++20
 
@@ -9,5 +9,7 @@ $(library).libs := ext++ fmt
 
 install := $(library)
 targets := $(install)
+
+files := $(include) $(src) Makefile VERSION
 
 include mkbuild/base.mk
