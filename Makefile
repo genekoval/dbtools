@@ -10,6 +10,6 @@ $(library).libs := ext++ fmt
 install := $(library)
 targets := $(install)
 
-files := $(include) $(src) Makefile VERSION
+files = $(include) $(src) Makefile VERSION
 
 include mkbuild/base.mk
