@@ -25,6 +25,10 @@ namespace dbtools {
             std::span<const std::string_view> args
         ) const -> void;
 
+        auto migrate_data(std::string_view version) const -> void;
+
+        auto update() const -> void;
+
         auto wait_exec(
             std::string_view program,
             std::span<const std::string_view> args
@@ -44,7 +48,7 @@ namespace dbtools {
 
         auto init() const -> void;
 
-        auto migrate() const -> void;
+        auto migrate(std::string_view version) const -> void;
 
         auto restore(std::string_view file) const -> void;
     };

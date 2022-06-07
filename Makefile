@@ -5,7 +5,7 @@ STD := c++20
 
 library := lib$(project)
 $(library).type := shared
-$(library).libs := ext++ fmt
+$(library).libs := ext++ fmt pqxx pq
 
 install := $(library)
 targets := $(install)

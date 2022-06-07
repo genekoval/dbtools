@@ -46,17 +46,17 @@ namespace dbtools {
     auto postgresql::init() const -> void {
         const auto schema = (opts.sql_directory / data_schema).string();
         $(opts.client_program, stop_on_error, "--file", schema);
-        migrate();
-    }
-
-    auto postgresql::migrate() const -> void {
-        const auto schema = (opts.sql_directory / api_schema).string();
-        $(opts.client_program, stop_on_error, "--file", schema);
+        update();
     }
 
     auto postgresql::restore(std::string_view file) const -> void {
         $(opts.restore_program, "--clean", "--if-exists", file);
         analyze();
+    }
+
+    auto postgresql::update() const -> void {
+        const auto schema = (opts.sql_directory / api_schema).string();
+        $(opts.client_program, stop_on_error, "--file", schema);
     }
 
     auto postgresql::wait_exec(
