@@ -40,7 +40,7 @@ namespace dbtools {
             );
         }
 
-        auto update() const -> void;
+        auto update(std::string_view version) const -> void;
 
         auto wait_exec(
             std::string_view program,
@@ -59,7 +59,7 @@ namespace dbtools {
 
         auto exec(std::span<const std::string_view> args) const -> void;
 
-        auto init() const -> void;
+        auto init(std::string_view version) const -> void;
 
         auto migrate(std::string_view version) const -> void;
 

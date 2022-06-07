@@ -37,23 +37,17 @@ namespace dbtools {
         exec(opts.client_program, args);
     }
 
-    auto postgresql::init() const -> void {
+    auto postgresql::init(std::string_view version) const -> void {
         const auto file = std::string(data_schema) + sql_extension;
         const auto path = (opts.sql_directory / file).string();
         sql("--file", path);
 
-        update();
+        update(version);
     }
 
     auto postgresql::restore(std::string_view file) const -> void {
         $(opts.restore_program, "--clean", "--if-exists", file);
         analyze();
-    }
-
-    auto postgresql::update() const -> void {
-        const auto file = std::string(api_schema) + sql_extension;
-        const auto path = (opts.sql_directory / file).string();
-        sql("--file", path);
     }
 
     auto postgresql::wait_exec(

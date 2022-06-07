@@ -45,7 +45,7 @@ namespace {
 namespace dbtools {
     auto postgresql::migrate(std::string_view version) const -> void {
         migrate_data(version);
-        update();
+        update(version);
     }
 
     auto postgresql::migrate_data(std::string_view version) const -> void {
@@ -117,5 +117,15 @@ namespace dbtools {
             const auto next = it == end ? version : it->first;
             internal::write_schema_version(tx, next);
         }
+    }
+
+    auto postgresql::update(std::string_view version) const -> void {
+        const auto file = std::string(api_schema) + sql_extension;
+        const auto path = (opts.sql_directory / file).string();
+        sql("--file", path);
+
+        auto connection = pqxx::connection(opts.connection_string);
+        auto tx = pqxx::nontransaction(connection);
+        internal::write_schema_version(tx, version);
     }
 }
