@@ -16,6 +16,10 @@ namespace dbtools {
             std::filesystem::path sql_directory;
         };
     private:
+        static constexpr auto api_schema = "api";
+        static constexpr auto data_schema = "data";
+        static constexpr auto sql_extension = ".sql";
+
         const options opts;
 
         auto analyze() const -> void;
@@ -26,6 +30,15 @@ namespace dbtools {
         ) const -> void;
 
         auto migrate_data(std::string_view version) const -> void;
+
+        template <typename ...Args>
+        auto sql(Args&&... args) const -> void {
+            $(opts.client_program,
+                "--set", "ON_ERROR_STOP=1",
+                "--quiet",
+                std::forward<Args>(args)...
+            );
+        }
 
         auto update() const -> void;
 

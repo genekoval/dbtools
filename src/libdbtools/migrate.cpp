@@ -49,9 +49,14 @@ namespace dbtools {
     }
 
     auto postgresql::migrate_data(std::string_view version) const -> void {
+        const auto set_search_path = fmt::format(
+            "SET search_path TO {}",
+            data_schema
+        );
+
         auto connection = pqxx::connection(opts.connection_string);
         auto tx = pqxx::nontransaction(connection);
-        tx.exec0("SET search_path TO data");
+        tx.exec0(set_search_path);
 
         const auto schema_version = internal::read_schema_version(tx)
             .value_or("0.1.0");
@@ -85,9 +90,9 @@ namespace dbtools {
         for (const auto& entry : fs::directory_iterator(migration_dir)) {
             const auto& path = entry.path();
 
-            if (!(entry.is_regular_file() && path.extension() == ".sql")) {
-                continue;
-            }
+            if (!(
+                entry.is_regular_file() && path.extension() == sql_extension
+            )) continue;
 
             const auto& ver = path.stem().native();
 
@@ -104,11 +109,9 @@ namespace dbtools {
 
             fmt::print("migrate {}\n", key);
 
-            $(opts.client_program,
-                "--set", "ON_ERROR_STOP=1",
-                "--quiet",
-                "--command", "SET search_path TO data",
-                "--file", file
+           sql(
+               "--command", set_search_path,
+               "--file", file
             );
 
             const auto next = it == end ? version : it->first;

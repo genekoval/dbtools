@@ -6,12 +6,6 @@
 
 namespace fs = std::filesystem;
 
-namespace {
-    constexpr auto api_schema = "api.sql";
-    constexpr auto data_schema = "data.sql";
-    constexpr auto stop_on_error = "--set=ON_ERROR_STOP=1";
-}
-
 namespace dbtools {
     postgresql::postgresql(options&& opts) : opts(std::move(opts)) {}
 
@@ -44,8 +38,10 @@ namespace dbtools {
     }
 
     auto postgresql::init() const -> void {
-        const auto schema = (opts.sql_directory / data_schema).string();
-        $(opts.client_program, stop_on_error, "--file", schema);
+        const auto file = std::string(data_schema) + sql_extension;
+        const auto path = (opts.sql_directory / file).string();
+        sql("--file", path);
+
         update();
     }
 
@@ -55,8 +51,9 @@ namespace dbtools {
     }
 
     auto postgresql::update() const -> void {
-        const auto schema = (opts.sql_directory / api_schema).string();
-        $(opts.client_program, stop_on_error, "--file", schema);
+        const auto file = std::string(api_schema) + sql_extension;
+        const auto path = (opts.sql_directory / file).string();
+        sql("--file", path);
     }
 
     auto postgresql::wait_exec(
