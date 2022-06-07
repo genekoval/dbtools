@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <pqxx/pqxx>
 #include <span>
 #include <string>
 #include <vector>
@@ -15,6 +16,10 @@ namespace dbtools {
             std::string restore_program = "pg_restore";
             std::filesystem::path sql_directory;
         };
+
+        static auto read_schema_version(
+            pqxx::transaction_base& tx
+        ) -> std::optional<std::string>;
     private:
         static constexpr auto api_schema = "api";
         static constexpr auto data_schema = "data";

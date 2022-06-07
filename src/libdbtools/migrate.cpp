@@ -1,7 +1,6 @@
 #include <dbtools/postgresql.h>
 
 #include <fmt/format.h>
-#include <pqxx/pqxx>
 
 namespace fs = std::filesystem;
 
@@ -9,28 +8,12 @@ namespace {
     namespace internal {
         constexpr auto migration_dir = "migration";
 
-        auto read_schema_version(
-            pqxx::transaction_base& tx
-        ) -> std::optional<std::string> {
-            const auto version_exists = tx.exec1(
-                "SELECT exists("
-                    "SELECT * FROM pg_proc WHERE proname = 'schema_version'"
-                ")"
-            )[0].as<bool>();
-
-            if (!version_exists) return {};
-
-            return tx.exec1(
-                "SELECT schema_version()"
-            )[0].as<std::string>();
-        }
-
         auto write_schema_version(
             pqxx::transaction_base& tx,
             std::string_view version
         ) -> void {
             tx.exec0(fmt::format(
-                "CREATE OR REPLACE FUNCTION schema_version() "
+                "CREATE OR REPLACE FUNCTION data.schema_version() "
                 "RETURNS text AS $$ BEGIN "
                     "RETURN '{}'; "
                 "END; $$ "
@@ -58,7 +41,7 @@ namespace dbtools {
         auto tx = pqxx::nontransaction(connection);
         tx.exec0(set_search_path);
 
-        const auto schema_version = internal::read_schema_version(tx)
+        const auto schema_version = read_schema_version(tx)
             .value_or("0.1.0");
 
         // Nothing to migrate.
@@ -117,6 +100,20 @@ namespace dbtools {
             const auto next = it == end ? version : it->first;
             internal::write_schema_version(tx, next);
         }
+    }
+
+    auto postgresql::read_schema_version(
+        pqxx::transaction_base& tx
+    ) -> std::optional<std::string> {
+        const auto version_exists = tx.exec1(
+            "SELECT exists("
+                "SELECT * FROM pg_proc WHERE proname = 'schema_version'"
+            ")"
+        )[0].as<bool>();
+
+        if (!version_exists) return {};
+
+        return tx.exec1("SELECT data.schema_version()")[0].as<std::string>();
     }
 
     auto postgresql::update(std::string_view version) const -> void {
