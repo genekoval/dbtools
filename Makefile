@@ -10,6 +10,8 @@ $(library).libs := ext++ fmt pqxx pq
 install := $(library)
 targets := $(install)
 
+install.directories = $(include)/$(project)
+
 files = $(include) $(src) Makefile VERSION
 
 include mkbuild/base.mk
