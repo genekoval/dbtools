@@ -1,12 +1,20 @@
 #pragma once
 
 #include <filesystem>
-#include <pqxx/pqxx>
+#include <pg++/pg++>
 #include <span>
 #include <string>
 #include <vector>
+#include <verp/verp>
 
 namespace dbtools {
+    namespace detail {
+        auto exec(
+            std::string_view program,
+            std::span<const std::string_view> args
+        ) -> ext::task<>;
+    }
+
     class postgresql {
     public:
         struct options {
@@ -16,58 +24,54 @@ namespace dbtools {
             std::string restore_program = "pg_restore";
             std::filesystem::path sql_directory;
         };
-
-        static auto read_schema_version(
-            pqxx::transaction_base& tx
-        ) -> std::optional<std::string>;
     private:
         static constexpr auto api_schema = "api";
         static constexpr auto data_schema = "data";
         static constexpr auto sql_extension = ".sql";
 
         const options opts;
+        std::optional<pg::client> client_storage;
 
-        auto analyze() const -> void;
+        auto analyze() -> ext::task<>;
 
-        auto exec(
-            std::string_view program,
-            std::span<const std::string_view> args
-        ) const -> void;
+        auto client() -> ext::task<std::reference_wrapper<pg::client>>;
 
-        auto migrate_data(std::string_view version) const -> void;
+        template <typename... Args>
+        requires (std::convertible_to<Args, std::string_view> && ...)
+        auto exec(std::string_view program, Args&&... args) -> ext::task<> {
+            const auto argv = std::vector<std::string_view> {
+                "--dbname", opts.connection_string,
+                args...
+            };
+
+            co_await detail::exec(program, argv);
+        }
+
+        auto migrate_data(const verp::version& version) -> ext::task<>;
+
+        auto schema_version() -> ext::task<std::optional<verp::version>>;
+
+        auto schema_version(const verp::version& version) -> ext::task<>;
 
         template <typename ...Args>
-        auto sql(Args&&... args) const -> void {
-            $(opts.client_program,
+        auto sql(Args&&... args) -> ext::task<> {
+            co_await exec(opts.client_program,
                 "--set", "ON_ERROR_STOP=1",
                 "--quiet",
                 std::forward<Args>(args)...
             );
         }
 
-        auto update(std::string_view version) const -> void;
-
-        auto wait_exec(
-            std::string_view program,
-            std::span<const std::string_view> args
-        ) const -> void;
-
-        template <typename ...Args>
-        auto $(std::string_view program, Args&&... args) const -> void {
-            const auto arg_list = std::vector<std::string_view> {args...};
-            wait_exec(program, arg_list);
-        }
+        auto update(const verp::version& version) -> ext::task<>;
     public:
         postgresql(options&& opts);
 
-        auto dump(std::string_view file) const -> void;
+        auto dump(std::string_view file) -> ext::task<>;
 
-        auto exec(std::span<const std::string_view> args) const -> void;
+        auto init(std::string_view version) -> ext::task<>;
 
-        auto init(std::string_view version) const -> void;
+        auto migrate(std::string_view version) -> ext::task<>;
 
-        auto migrate(std::string_view version) const -> void;
-
-        auto restore(std::string_view file) const -> void;
+        auto restore(std::string_view file) -> ext::task<>;
     };
 }

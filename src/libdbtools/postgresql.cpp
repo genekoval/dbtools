@@ -1,87 +1,39 @@
 #include <dbtools/postgresql.h>
 
-#include <ext/unix.h>
 #include <fmt/format.h>
 #include <timber/timber>
-
-namespace fs = std::filesystem;
 
 namespace dbtools {
     postgresql::postgresql(options&& opts) : opts(std::move(opts)) {}
 
-    auto postgresql::analyze() const -> void {
-        $(opts.client_program, "--command", "ANALYZE");
+    auto postgresql::analyze() -> ext::task<> {
+        auto& client = (co_await this->client()).get();
+        co_await client.exec("ANALYZE");
     }
 
-    auto postgresql::dump(std::string_view file) const -> void {
-        $(opts.dump_program, "--format", "custom", "--file", file);
+    auto postgresql::client() -> ext::task<std::reference_wrapper<pg::client>> {
+        if (client_storage) co_return *client_storage;
+
+        const auto params = pg::parameters::parse(opts.connection_string);
+        client_storage = co_await pg::connect(params);
+        co_return *client_storage;
+    }
+
+    auto postgresql::dump(std::string_view file) -> ext::task<> {
+        co_await exec(opts.dump_program, "--format", "custom", "--file", file);
         TIMBER_DEBUG("Saved database dump to: {}", file);
     }
 
-    auto postgresql::exec(
-        std::string_view program,
-        std::span<const std::string_view> args
-    ) const -> void {
-        auto arguments = std::vector<std::string_view> {
-            "--dbname", opts.connection_string
-        };
-
-        std::copy(args.begin(), args.end(), std::back_inserter(arguments));
-
-        ext::exec(program, arguments);
-    }
-
-    auto postgresql::exec(
-        std::span<const std::string_view> args
-    ) const -> void {
-        exec(opts.client_program, args);
-    }
-
-    auto postgresql::init(std::string_view version) const -> void {
+    auto postgresql::init(std::string_view version) -> ext::task<> {
         const auto file = std::string(data_schema) + sql_extension;
         const auto path = (opts.sql_directory / file).string();
-        sql("--file", path);
+        co_await sql("--file", path);
 
-        update(version);
+        co_await update(verp::version(version));
     }
 
-    auto postgresql::restore(std::string_view file) const -> void {
-        $(opts.restore_program, "--clean", "--if-exists", file);
-        analyze();
-    }
-
-    auto postgresql::wait_exec(
-        std::string_view program,
-        std::span<const std::string_view> args
-    ) const -> void {
-        const auto parent = ext::process::fork();
-
-        if (!parent) exec(program, args);
-
-        const auto process = *parent;
-        const auto exit = process.wait();
-
-        if (exit.code == CLD_EXITED) {
-            if (exit.status == 0) return;
-
-            throw std::runtime_error(fmt::format(
-                "{} exited with code {}",
-                program,
-                exit.status
-            ));
-        }
-
-        if (exit.code == CLD_KILLED || exit.code == CLD_DUMPED) {
-            throw std::runtime_error(fmt::format(
-                "{} was killed by signal {}",
-                program,
-                exit.status
-            ));
-        }
-
-        throw std::runtime_error(fmt::format(
-            "{} did not succeed",
-            program
-        ));
+    auto postgresql::restore(std::string_view file) -> ext::task<> {
+        co_await exec(opts.restore_program, "--clean", "--if-exists", file);
+        co_await analyze();
     }
 }
