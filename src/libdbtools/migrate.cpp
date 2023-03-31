@@ -4,9 +4,6 @@
 
 namespace fs = std::filesystem;
 
-namespace {
-}
-
 namespace dbtools {
     auto postgresql::migrate(std::string_view version) -> ext::task<> {
         const auto v = verp::version(version);
@@ -29,8 +26,12 @@ namespace dbtools {
         const auto schema_version =
             (co_await this->schema_version()).value_or(verp::version());
 
-        // Nothing to migrate.
-        if (version == schema_version) co_return;
+        if (schema_version == version) {
+            TIMBER_DEBUG(
+                "Schema version and app version are equal: Nothing to migrate"
+            );
+            co_return;
+        }
 
         if (schema_version > version) {
             throw std::runtime_error(fmt::format(
@@ -43,11 +44,17 @@ namespace dbtools {
 
         const auto dir = opts.sql_directory / migration_directory;
 
-        if (!fs::exists(dir)) co_return;
+        if (!fs::exists(dir)) {
+            TIMBER_DEBUG(
+                R"(No migrations to run: Directory "{}" does not exist)",
+                dir.native()
+            );
+            co_return;
+        }
 
         if (!fs::is_directory(dir)) {
             throw std::runtime_error(fmt::format(
-                "{}: not a directory",
+                "{}: Not a directory",
                 dir.native()
             ));
         }
@@ -60,12 +67,42 @@ namespace dbtools {
 
             if (!(
                 entry.is_regular_file() && path.extension() == sql_extension
-            )) continue;
+            )) {
+                TIMBER_DEBUG(R"(Skipping "{}": Not a SQL file)", path.native());
+                continue;
+            }
 
             const auto ver = verp::version(path.stem().native());
 
-            if (ver < schema_version || ver >= version) continue;
+            if (schema_version > ver) {
+                TIMBER_DEBUG(
+                    R"(Skipping "{}": Schema version is greater)",
+                    path.native()
+                );
+                continue;
+            }
+
+            if (ver >= version) {
+                TIMBER_DEBUG(
+                    R"(Skipping "{}": Greater than or equal to target)",
+                    path.native()
+                );
+                continue;
+            }
+
+            TIMBER_DEBUG(R"(Adding "{}")", path.native());
             migrations[ver] = path;
+        }
+
+        if (migrations.empty()) {
+            TIMBER_DEBUG("No migrations to run");
+        }
+        else {
+            TIMBER_DEBUG(
+                "Running {:L} migration{}",
+                migrations.size(),
+                migrations.size() == 1 ? "" : "s"
+            );
         }
 
         auto it = migrations.begin();
@@ -75,7 +112,7 @@ namespace dbtools {
             const auto& [ver, path] = *it++;
             const auto& file = path.native();
 
-            TIMBER_INFO("migrate {}\n", ver);
+            TIMBER_INFO("Migrate {}\n", ver);
 
             co_await sql(
                "--command", set_search_path,
