@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <netcore/netcore>
 #include <pg++/pg++>
 #include <span>
 #include <string>
@@ -8,13 +9,6 @@
 #include <verp/verp>
 
 namespace dbtools {
-    namespace detail {
-        auto exec(
-            std::string_view program,
-            std::span<const std::string_view> args
-        ) -> ext::task<>;
-    }
-
     class postgresql {
     public:
         struct options {
@@ -39,12 +33,10 @@ namespace dbtools {
         template <typename... Args>
         requires (std::convertible_to<Args, std::string_view> && ...)
         auto exec(std::string_view program, Args&&... args) -> ext::task<> {
-            const auto argv = std::vector<std::string_view> {
+            co_await netcore::proc::exec(program,
                 "--dbname", opts.connection_string,
-                args...
-            };
-
-            co_await detail::exec(program, argv);
+                std::forward<Args>(args)...
+            );
         }
 
         auto migrate_data(const verp::version& version) -> ext::task<>;
