@@ -112,7 +112,7 @@ namespace dbtools {
             const auto& [ver, path] = *it++;
             const auto& file = path.native();
 
-            TIMBER_INFO("Migrate {}\n", ver);
+            TIMBER_INFO("Migrate {}", ver);
 
             co_await sql(
                "--command", set_search_path,
