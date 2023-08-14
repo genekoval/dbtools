@@ -4,19 +4,44 @@
 #include <timber/timber>
 
 namespace dbtools {
-    postgresql::postgresql(options&& opts) : opts(std::move(opts)) {}
+    postgresql::postgresql(options&& opts) :
+        opts(std::move(opts)),
+        parameters(pg::parameters::parse(this->opts.connection_string))
+    {}
 
     auto postgresql::analyze() -> ext::task<> {
         auto& client = (co_await this->client()).get();
         co_await client.exec("ANALYZE");
     }
 
-    auto postgresql::client() -> ext::task<std::reference_wrapper<pg::client>> {
-        if (client_storage) co_return *client_storage;
+    auto postgresql::api_schema_name() -> std::string_view {
+        return parameters.params.at("user");
+    }
 
-        const auto params = pg::parameters::parse(opts.connection_string);
-        client_storage = co_await pg::connect(params);
+    auto postgresql::client() -> ext::task<std::reference_wrapper<pg::client>> {
+        if (!client_storage) client_storage = co_await pg::connect(parameters);
         co_return *client_storage;
+    }
+
+    auto postgresql::create_api_schema() -> ext::task<> {
+        co_await create_schema(api_schema_name());
+    }
+
+    auto postgresql::create_schema(std::string_view schema) -> ext::task<> {
+        auto& client = (co_await this->client()).get();
+        co_await client.exec(fmt::format("CREATE SCHEMA {}", schema));
+    }
+
+    auto postgresql::drop_api_schema() -> ext::task<> {
+        co_await drop_schema(api_schema_name());
+    }
+
+    auto postgresql::drop_schema(std::string_view schema) -> ext::task<> {
+        auto& client = (co_await this->client()).get();
+        co_await client.exec(fmt::format(
+            "DROP SCHEMA IF EXISTS {} CASCADE",
+            schema
+        ));
     }
 
     auto postgresql::dump(std::string_view file) -> ext::task<> {

@@ -8,6 +8,7 @@ namespace dbtools {
     auto postgresql::migrate(std::string_view version) -> ext::task<> {
         const auto v = verp::version(version);
 
+        co_await drop_api_schema();
         co_await migrate_data(v);
         co_await update(v);
     }
@@ -161,6 +162,8 @@ namespace dbtools {
     }
 
     auto postgresql::update(const verp::version& version) -> ext::task<> {
+        co_await create_api_schema();
+
         const auto file = std::string(api_schema) + sql_extension;
         const auto path = (opts.sql_directory / file).string();
         co_await sql("--file", path);

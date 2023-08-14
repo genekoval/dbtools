@@ -24,11 +24,22 @@ namespace dbtools {
         static constexpr auto sql_extension = ".sql";
 
         const options opts;
+        pg::parameters parameters;
         std::optional<pg::client> client_storage;
 
         auto analyze() -> ext::task<>;
 
+        auto api_schema_name() -> std::string_view;
+
         auto client() -> ext::task<std::reference_wrapper<pg::client>>;
+
+        auto create_api_schema() -> ext::task<>;
+
+        auto create_schema(std::string_view schema) -> ext::task<>;
+
+        auto drop_api_schema() -> ext::task<>;
+
+        auto drop_schema(std::string_view schema) -> ext::task<>;
 
         template <typename... Args>
         requires (std::convertible_to<Args, std::string_view> && ...)
