@@ -116,6 +116,7 @@ namespace dbtools {
 
             co_await sql(
                "--command", set_search_path,
+               "--single-transaction",
                "--file", file
             );
 
