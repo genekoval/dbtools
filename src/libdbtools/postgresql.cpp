@@ -50,9 +50,14 @@ namespace dbtools {
     }
 
     auto postgresql::init(std::string_view version) -> ext::task<> {
+        co_await create_schema(data_schema);
+
         const auto file = std::string(data_schema) + sql_extension;
         const auto path = (opts.sql_directory / file).string();
-        co_await sql("--file", path);
+        co_await sql(
+            "--command", fmt::format("SET search_path TO {}", data_schema),
+            "--file", path
+        );
 
         co_await update(verp::version(version));
     }
