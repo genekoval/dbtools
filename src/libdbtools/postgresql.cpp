@@ -62,6 +62,12 @@ namespace dbtools {
         co_await update(verp::version(version));
     }
 
+    auto postgresql::reset(std::string_view version) -> ext::task<> {
+        co_await drop_api_schema();
+        co_await drop_schema(data_schema);
+        co_await init(version);
+    }
+
     auto postgresql::restore(std::string_view file) -> ext::task<> {
         co_await exec(opts.restore_program, "--clean", "--if-exists", file);
         co_await analyze();

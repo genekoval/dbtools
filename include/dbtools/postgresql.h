@@ -75,6 +75,8 @@ namespace dbtools {
 
         auto migrate(std::string_view version) -> ext::task<>;
 
+        auto reset(std::string_view version) -> ext::task<>;
+
         auto restore(std::string_view file) -> ext::task<>;
     };
 }
