@@ -16,10 +16,8 @@ namespace dbtools {
     auto postgresql::migrate_data(const verp::version& version) -> ext::task<> {
         constexpr auto migration_directory = "migration";
 
-        const auto set_search_path = fmt::format(
-            "SET search_path TO {}",
-            data_schema
-        );
+        const auto set_search_path =
+            fmt::format("SET search_path TO {}", data_schema);
 
         auto& client = (co_await this->client()).get();
         co_await client.exec(set_search_path);
@@ -54,10 +52,9 @@ namespace dbtools {
         }
 
         if (!fs::is_directory(dir)) {
-            throw std::runtime_error(fmt::format(
-                "{}: Not a directory",
-                dir.native()
-            ));
+            throw std::runtime_error(
+                fmt::format("{}: Not a directory", dir.native())
+            );
         }
 
         // The map automatically sorts the scripts based on version.
@@ -66,9 +63,8 @@ namespace dbtools {
         for (const auto& entry : fs::directory_iterator(dir)) {
             const auto& path = entry.path();
 
-            if (!(
-                entry.is_regular_file() && path.extension() == sql_extension
-            )) {
+            if (!(entry.is_regular_file() && path.extension() == sql_extension
+                )) {
                 TIMBER_DEBUG(R"(Skipping "{}": Not a SQL file)", path.native());
                 continue;
             }
@@ -95,9 +91,7 @@ namespace dbtools {
             migrations[ver] = path;
         }
 
-        if (migrations.empty()) {
-            TIMBER_DEBUG("No migrations to run");
-        }
+        if (migrations.empty()) { TIMBER_DEBUG("No migrations to run"); }
         else {
             TIMBER_DEBUG(
                 "Running {:L} migration{}",
@@ -116,47 +110,50 @@ namespace dbtools {
             TIMBER_INFO("Migrate {}", ver);
 
             co_await sql(
-               "--command", set_search_path,
-               "--single-transaction",
-               "--file", file
+                // clang-format off
+                "--command", set_search_path,
+                "--single-transaction",
+                "--file", file
+                // clang-format on
             );
 
             co_await this->schema_version(it == end ? version : ver);
         }
     }
 
-    auto postgresql::schema_version() ->
-        ext::task<std::optional<verp::version>>
-    {
+    auto postgresql::schema_version()
+        -> ext::task<std::optional<verp::version>> {
         auto& client = (co_await this->client()).get();
 
         const auto version_exists = co_await client.fetch<bool>(
+            // clang-format off
             "SELECT exists("
                 "SELECT * FROM pg_proc WHERE proname = 'schema_version'"
             ")"
+            // clang-format on
         );
 
         if (!version_exists) co_return std::nullopt;
 
-        const auto version_string = co_await client.fetch<std::string>(
-            "SELECT data.schema_version()"
-        );
+        const auto version_string =
+            co_await client.fetch<std::string>("SELECT data.schema_version()");
 
         co_return verp::version(version_string);
     }
 
-    auto postgresql::schema_version(
-        const verp::version& version
-    ) -> ext::task<> {
+    auto postgresql::schema_version(const verp::version& version)
+        -> ext::task<> {
         auto& client = (co_await this->client()).get();
 
         co_await client.exec(fmt::format(
+            // clang-format off
             "CREATE OR REPLACE FUNCTION data.schema_version() "
             "RETURNS text AS $$ BEGIN "
                 "RETURN '{}'; "
             "END; $$ "
             "IMMUTABLE "
             "LANGUAGE plpgsql",
+            // clang-format on
             version
         ));
     }

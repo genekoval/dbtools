@@ -42,10 +42,12 @@ namespace dbtools {
         auto drop_schema(std::string_view schema) -> ext::task<>;
 
         template <typename... Args>
-        requires (std::convertible_to<Args, std::string_view> && ...)
+        requires(std::convertible_to<Args, std::string_view> && ...)
         auto exec(std::string_view program, Args&&... args) -> ext::task<> {
-            co_await netcore::proc::exec(program,
-                "--dbname", opts.connection_string,
+            co_await netcore::proc::exec(
+                program,
+                "--dbname",
+                opts.connection_string,
                 std::forward<Args>(args)...
             );
         }
@@ -56,10 +58,12 @@ namespace dbtools {
 
         auto schema_version(const verp::version& version) -> ext::task<>;
 
-        template <typename ...Args>
+        template <typename... Args>
         auto sql(Args&&... args) -> ext::task<> {
-            co_await exec(opts.client_program,
-                "--set", "ON_ERROR_STOP=1",
+            co_await exec(
+                opts.client_program,
+                "--set",
+                "ON_ERROR_STOP=1",
                 "--quiet",
                 std::forward<Args>(args)...
             );

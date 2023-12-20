@@ -6,8 +6,7 @@
 namespace dbtools {
     postgresql::postgresql(options&& opts) :
         opts(std::move(opts)),
-        parameters(pg::parameters::parse(this->opts.connection_string))
-    {}
+        parameters(pg::parameters::parse(this->opts.connection_string)) {}
 
     auto postgresql::analyze() -> ext::task<> {
         auto& client = (co_await this->client()).get();
@@ -38,10 +37,9 @@ namespace dbtools {
 
     auto postgresql::drop_schema(std::string_view schema) -> ext::task<> {
         auto& client = (co_await this->client()).get();
-        co_await client.exec(fmt::format(
-            "DROP SCHEMA IF EXISTS {} CASCADE",
-            schema
-        ));
+        co_await client.exec(
+            fmt::format("DROP SCHEMA IF EXISTS {} CASCADE", schema)
+        );
     }
 
     auto postgresql::dump(std::string_view file) -> ext::task<> {
@@ -55,8 +53,10 @@ namespace dbtools {
         const auto file = std::string(data_schema) + sql_extension;
         const auto path = (opts.sql_directory / file).string();
         co_await sql(
+            // clang-format off
             "--command", fmt::format("SET search_path TO {}", data_schema),
             "--file", path
+            // clang-format on
         );
 
         co_await update(verp::version(version));
