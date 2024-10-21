@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  release:
+    runs-on: cpp
+    steps:
+      - name: Checkout
+        run: |
+          git init
+          git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+          git fetch --depth=1 --quiet origin tag $GITHUB_REF_NAME
+          git checkout $GITHUB_REF_NAME
+          git submodule update --init --recursive --depth=1
+      - name: Write VERSION file
+        run: echo ${GITHUB_REF_NAME#v} | tee VERSION
+      - name: "Install PostgreSQL"
+        run: |
+          pacman --noconfirm -Syu
+          pacman --noconfirm -S postgresql
+      - name: Run workflow preset
+        run: cmake --workflow --preset=release
+      - name: Clean up assets directory
+        run: rm -rf build/assets/_CPack_Packages
+      - name: Read tag message
+        id: read_message
+        run: |
+          subject=$(git tag -l --format='%(contents:subject)' $GITHUB_REF_NAME)
+          echo subject=$subject >> "$GITHUB_OUTPUT"
+      - name: Publish
+        uses: https://gitea.com/actions/release-action@main
+        with:
+          title: ${{ steps.read_message.outputs.subject }}
+          files: build/assets/*

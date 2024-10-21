@@ -1,0 +1,3 @@
+[submodule "cmake/easy-cmake"]
+	path = cmake/easy-cmake
+	url = ../easy-cmake.git

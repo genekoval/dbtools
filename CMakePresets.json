@@ -1,0 +1,83 @@
+{
+    "version": 7,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 27
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default Config",
+            "description": "Default build using Ninja generator",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+        {
+            "name": "docker",
+            "displayName": "Docker",
+            "description": "Run tests in a Docker container",
+            "inherits": "default",
+            "binaryDir": "/build"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "ci",
+            "configurePreset": "default",
+            "configuration": "Release"
+        },
+        {
+            "name": "docker",
+            "configurePreset": "docker",
+            "configuration": "Release",
+            "verbose": true
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "source",
+            "configurePreset": "default",
+            "configFile": "CPackSourceConfig.cmake",
+            "packageDirectory": "${sourceDir}/build/assets",
+            "generators": [
+                "TXZ"
+            ]
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "docker",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "docker"
+                },
+                {
+                    "type": "build",
+                    "name": "docker"
+                }
+            ]
+        },
+        {
+            "name": "release",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "default"
+                },
+                {
+                    "type": "build",
+                    "name": "ci"
+                },
+                {
+                    "type": "package",
+                    "name": "source"
+                }
+            ]
+        }
+    ]
+}
